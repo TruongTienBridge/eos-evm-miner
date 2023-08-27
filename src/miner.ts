@@ -83,6 +83,23 @@ export default class EosEvmMiner {
         return '0x'+keccak256(Buffer.from(rlptx, "hex")).toString("hex");
     }
 
+    async eth_chainId(){
+        const result = await this.rpc.get_table_rows({
+            json: true,
+            code: `eosio.evm`,
+            scope: `eosio.evm`,
+            table: 'config',
+            limit: 1,
+            reverse: false,
+            show_payer: false
+        });
+        return "0x" + parseInt(result.rows[0].chainid).toString(16);
+    }
+
+    async eth_blockNumber(){
+        return "0x1234";
+    }
+
     async eth_gasPrice(params:any[]){
         const timeSinceLastCall = Date.now() - this.lastGetTableCallTime;
         if (!(this.config.lockGasPrice && this.gasPrice !== "0x1") && timeSinceLastCall >= 1000 ) {

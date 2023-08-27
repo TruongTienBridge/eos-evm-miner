@@ -5,7 +5,16 @@ import jayson from 'jayson';
 import EosEvmMiner from './miner';
 import {logger} from "./logger";
 
-const { PRIVATE_KEY, MINER_ACCOUNT, RPC_ENDPOINTS, PORT = 50305, LOCK_GAS_PRICE = "true", MINER_PERMISSION = "active", EXPIRE_SEC = 60 } = process.env;
+const { 
+    PRIVATE_KEY = '5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
+    MINER_ACCOUNT = 'eosio.evm',
+    RPC_ENDPOINTS = 'http://127.0.0.1:8888|http://192.168.1.1:8888',
+    PORT = 50305,
+    LOCK_GAS_PRICE = "true",
+    MINER_PERMISSION = "active",
+    EXPIRE_SEC = 60,
+    READER_PORT = 9981
+} = process.env;
 
 const quit = (error:string) => {
     logger.error(error);
@@ -30,7 +39,7 @@ const eosEvmMiner = new EosEvmMiner({
     expireSec: +EXPIRE_SEC
 });
 
-const server = new jayson.Server({
+const methods = {
     eth_sendRawTransaction: function(params, callback) {
         eosEvmMiner.eth_sendRawTransaction(params).then((result:any) => {
             callback(null, result);
@@ -50,6 +59,18 @@ const server = new jayson.Server({
                 "message": error.message
             });
         });
+    }
+}
+
+const server = new jayson.Server(methods, {
+    router: function(method, params) {
+        // regular by-name routing first
+        console.log('--- method: ', method, ' ', params, ' ');
+        if(typeof(this._methods[method]) === 'object') return this._methods[method];
+        console.log(new Date().toISOString() + '--- proxy ----- ');
+        return jayson.Client.http({
+            port: READER_PORT
+        })
     }
 });
 
